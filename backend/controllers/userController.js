@@ -2,6 +2,8 @@ import bcrypt from "bcrypt";
 import { v2 as cloudinary } from "cloudinary";
 import jwt from "jsonwebtoken";
 import validator from "validator";
+import appointmentModel from "../models/appointmentModel.js";
+import doctorModel from "../models/doctorModel.js";
 import userModel from "../models/userModel.js";
 
 // API to register user
@@ -72,7 +74,6 @@ const loginUser = async (req, res, next) => {
 const getProfile = async (req, res, next) => {
   try {
     const { userId } = req.body;
-    console.log(userId);
     const userData = await userModel.findById(userId).select("-password");
 
     res.status(200).json({ success: true, userData });
@@ -116,4 +117,206 @@ const updateProfile = async (req, res, next) => {
   }
 };
 
-export { getProfile, loginUser, registerUser, updateProfile };
+// API to book appointment
+const bookAppointment = async (req, res, next) => {
+  try {
+    const { userId, docId, slotDate, slotTime } = req.body;
+
+    const docData = await doctorModel.findById(docId).select("-password");
+
+    if (!docData.available) {
+      return res.json({ success: false, message: "Doctor not available" });
+    }
+
+    let slots_booked = docData.slots_booked;
+
+    // checking for slot availability
+    if (slots_booked[slotDate]) {
+      if (slots_booked[slotDate].includes(slotTime)) {
+        return res.json({ success: false, message: "Slot not available" });
+      } else {
+        slots_booked[slotDate].push(slotTime);
+      }
+    } else {
+      slots_booked[slotDate] = [];
+      slots_booked[slotDate].push(slotTime);
+    }
+
+    const userData = await userModel.findById(userId).select("-password");
+
+    delete docData.slots_booked;
+
+    const appointmentData = {
+      userId,
+      docId,
+      userData,
+      docData,
+      amount: docData.fees,
+      slotTime,
+      slotDate,
+      data: Date.now(),
+    };
+
+    const newAppointment = new appointmentModel(appointmentData);
+
+    await newAppointment.save();
+
+    // save new slots data in docData
+    await doctorModel.findByIdAndUpdate(docId, { slots_booked });
+
+    res.status(200).json({ success: true, message: "Appointment Booked" });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// API to get user appointments for frontend my-appointments page
+const listAppointment = async (req, res, next) => {
+  try {
+    const { userId } = req.body;
+
+    const appointments = await appointmentModel.find({ userId });
+    if (!appointments) {
+      return res.json({
+        success: false,
+        message: "Cannot find any appointment",
+      });
+    }
+    res.json({ success: true, appointments });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// API to cancel appointment
+const cancelAppointment = async (req, res, next) => {
+  try {
+    const { userId, appointmentId } = req.body;
+    const appointmentData = await appointmentModel.findById(appointmentId);
+
+    if (!appointmentData) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Appointment not found" });
+    }
+
+    // vefify appointment user
+    if (appointmentData.userId !== userId) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Unauthorized action" });
+    }
+
+    // Update appointment status to cancelled
+    await appointmentModel.findByIdAndUpdate(appointmentId, {
+      cancelled: true,
+    });
+
+    // releasing doctor slot
+    const { docId, slotDate, slotTime } = appointmentData;
+    const doctorData = await doctorModel.findById(docId);
+
+    if (!doctorData) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Doctor not found" });
+    }
+
+    let slots_booked = doctorData.slots_booked;
+    if (slots_booked[slotDate]) {
+      slots_booked[slotDate] = slots_booked[slotDate].filter(
+        (item) => item !== slotTime
+      );
+    }
+
+    // Update doctor's available slots
+    await doctorModel.findByIdAndUpdate(docId, { slots_booked });
+
+    // Respond success
+    res.status(200).json({ success: true, message: "Appointment cancelled" });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// API to make payment of appointment using rezorpay
+class RazorpayInstance {
+  constructor(key_id, key_secret) {
+    this.key_id = key_id;
+    this.key_secret = key_secret;
+  }
+  initialize() {
+    return {
+      key_id: this.key_id,
+      key_secret: this.key_secret,
+    };
+  }
+}
+
+// Usage example:
+const razorpay = new RazorpayInstance(
+  process.env.RAZORPAY_KEY_ID,
+  process.env.RAZORPAY_KEY_SECRET
+);
+const razorpayInstance = razorpay.initialize();
+
+const paymentRazorpay = async (req, res, next) => {
+  try {
+    const { appointmentId } = req.body;
+    const appointmentData = await appointmentModel.findById(appointmentId);
+
+    if (!appointmentData || appointmentData.cancelled) {
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: "Appointment Cancelled or not found!",
+        });
+    }
+
+    // careating options for razorpay payment
+    const options = {
+      amount: appointmentData.amount * 100,
+      currency: process.env.CURRENCY,
+      receipt: appointmentId,
+    };
+
+    // creation of an order
+    // const order = await razorpayInstance.orders.create(options)
+
+    res.json({ success: true, order: options });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// API to verify payment of rezorpay
+const verifyRazorpay = async (req, res, next) => {
+  try {
+    const { razorpay_order_id } = req.body;
+    const orderInfo = await razorpayInstance.order.fetch(razorpay_order_id);
+
+    if (orderInfo.status === "paid") {
+      await appointmentModel.findByIdAndUpdate(orderInfo.receipt, {
+        payment: true,
+      });
+      res.status(200).json({ success: true, message: "Payment successful" });
+    } else {
+      res.status(200).json({ success: true, message: "Payment failed" });
+    }
+  } catch (error) {
+    next(error);
+  }
+};
+
+export {
+  bookAppointment,
+  cancelAppointment,
+  getProfile,
+  listAppointment,
+  loginUser,
+  paymentRazorpay,
+  registerUser,
+  updateProfile,
+  verifyRazorpay,
+};
