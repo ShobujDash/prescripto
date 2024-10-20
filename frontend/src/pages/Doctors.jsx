@@ -5,8 +5,8 @@ import { AppContext } from "../context/AppContext";
 const Doctors = () => {
   const { specility } = useParams();
   const [filterDoc, setFilterDoc] = useState([]);
-  const [showFilter,setShowFilter] = useState(false);
-  
+  const [showFilter, setShowFilter] = useState(false);
+
   const navigate = useNavigate();
   const { doctors } = useContext(AppContext);
 
@@ -129,7 +129,16 @@ const Doctors = () => {
               <div className="p-4 ">
                 <div className="flex items-center gap-2 text-sm text-center text-green-500">
                   <p className="w-2 h-2 bg-green-500 rounded-full"></p>
-                  <p>Available</p>
+
+                  {doctor?.available ? (
+                    <p className="">
+                      Available
+                    </p>
+                  ) : (
+                    <p className=" text-gray-500 ">
+                     Not Available
+                    </p>
+                  )}
                 </div>
                 <p className="text-gray-900 text-lg font-medium">
                   {doctor.name}
