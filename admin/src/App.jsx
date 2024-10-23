@@ -31,14 +31,14 @@ function App() {
   };
 
   return aToken || dToken ? (
-    <div className={`${darkMode && "dark"} font-quicksand`}>
+    <div className={`${darkMode && "dark"} font-quicksand  `}>
       <Header
         toggleDarkMode={toggleDarkMode}
         darkMode={darkMode}
         toggleSidebar={toggleSidebar}
       />
 
-      <div className="flex items-start">
+      <div className="flex items-start dark:bg-[#0E1424]">
         <Sidebar />
         <Routes>
           {/* Admin Route */}
@@ -49,9 +49,9 @@ function App() {
           <Route path="/doctor-list" element={<Doctorlist />} />
 
           {/* Doctor Route */}
-          <Route path="/doctor-dashboard" element={<DoctorDashboard/>} />
-          <Route path="/doctor-appointments" element={<DoctorAppointments/>} />
-          <Route path="/doctor-profile" element={<DoctorProfile/>} />
+          <Route path="/doctor-dashboard" element={<DoctorDashboard />} />
+          <Route path="/doctor-appointments" element={<DoctorAppointments />} />
+          <Route path="/doctor-profile" element={<DoctorProfile />} />
         </Routes>
       </div>
 

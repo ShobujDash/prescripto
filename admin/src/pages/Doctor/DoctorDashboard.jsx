@@ -19,7 +19,7 @@ const DoctorDashboard = () => {
 
   return (
     dashData && (
-      <div className="p-5 w-full dark:bg-[#0E1424] dark:text-white">
+      <div className="p-5 w-full h-screen dark:bg-[#0E1424] dark:text-white">
         <div className="flex flex-wrap gap-3">
           <div className="flex items-center gap-2 bg-white dark:bg-[#192442] p-4 min-w-52 rounded border-2 border-gray-600 cursor-pointer hover:scale-105 transition-all  ">
             <img className="w-14" src={assets.earning_icon} alt="" />
