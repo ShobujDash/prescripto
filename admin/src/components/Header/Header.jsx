@@ -3,9 +3,11 @@ import { HiOutlineMenuAlt2 } from "react-icons/hi";
 import { useNavigate } from "react-router-dom";
 import { assets } from "../../assets/assets";
 import { useAdminContext } from "../../context/AdminContext";
+import { useDoctorContext } from "../../context/DoctorContext";
 
 function Header({ darkMode, toggleDarkMode, toggleSidebar }) {
   const { aToken, setAToken } = useAdminContext();
+  const { dToken, setDToken } = useDoctorContext();
 
   const navigate = useNavigate();
 
@@ -13,6 +15,8 @@ function Header({ darkMode, toggleDarkMode, toggleSidebar }) {
     navigate("/");
     aToken && setAToken("");
     aToken && localStorage.removeItem("aToken");
+    dToken && setDToken("")
+    dToken && localStorage.removeItem("DToken");
   };
 
   return (

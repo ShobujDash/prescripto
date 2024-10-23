@@ -8,7 +8,7 @@ const Sidebar = () => {
   const { dToken } = useDoctorContext();
 
   return (
-    <div className="min-h-[90.5vh] dark:bg-[#0E1424] bg-white dark:text-white border-red-100 ">
+    <div className="h-screen dark:bg-[#0E1424] bg-white dark:text-white border-red-100 ">
       {aToken && (
         <ul className="text-[#515151] mt-5 ">
           <NavLink
@@ -83,7 +83,7 @@ const Sidebar = () => {
       )}
 
       {dToken && (
-        <ul className="text-[#515151] mt-5 ">
+        <ul className="text-[#515151] ">
           <NavLink
             className={({ isActive }) =>
               `flex items-center gap-3 py-3.5 px-3 md:px-9 md:min-w-64 cursor-pointer ${

@@ -161,7 +161,9 @@ const doctorDashboard = async (req, res, next) => {
 const doctorProfile = async (req,res,next) => {
   try {
     const { docId } = req.body;
-    const profileData = await doctorModel.find({ docId }).select('-password');
+    console.log(docId)
+    const profileData = await doctorModel.findById(docId ).select('-password');
+    console.log(profileData)
     res.status(200).json({
       success: true,
       profileData
